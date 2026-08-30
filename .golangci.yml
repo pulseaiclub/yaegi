@@ -21,7 +21,7 @@ linters:
             - $all
           allow:
             - $gostd
-            - github.com/traefik/yaegi
+            - github.com/pulseaiclub/yaegi
     goconst:
       min-len: 3
       min-occurrences: 3

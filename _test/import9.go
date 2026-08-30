@@ -1,6 +1,6 @@
 package main
 
-import "github.com/traefik/yaegi/_test/baz-bat"
+import "github.com/pulseaiclub/yaegi/_test/baz-bat"
 
 func main() {
 	println(baz.Name)

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/traefik/yaegi/interp"
-	"github.com/traefik/yaegi/stdlib"
-	"github.com/traefik/yaegi/stdlib/unsafe"
+	"github.com/pulseaiclub/yaegi/interp"
+	"github.com/pulseaiclub/yaegi/stdlib"
+	"github.com/pulseaiclub/yaegi/stdlib/unsafe"
 )
 
 var testsToSkipGo122 = map[string]bool{}

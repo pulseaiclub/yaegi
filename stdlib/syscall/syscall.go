@@ -7,7 +7,7 @@ import "reflect"
 var Symbols = map[string]map[string]reflect.Value{}
 
 func init() {
-	Symbols["github.com/traefik/yaegi/stdlib/syscall/syscall"] = map[string]reflect.Value{
+	Symbols["github.com/pulseaiclub/yaegi/stdlib/syscall/syscall"] = map[string]reflect.Value{
 		"Symbols": reflect.ValueOf(Symbols),
 	}
 }

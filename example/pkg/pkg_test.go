@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/traefik/yaegi/interp"
-	"github.com/traefik/yaegi/stdlib"
+	"github.com/pulseaiclub/yaegi/interp"
+	"github.com/pulseaiclub/yaegi/stdlib"
 )
 
 func TestPackages(t *testing.T) {

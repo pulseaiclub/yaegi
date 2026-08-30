@@ -25,7 +25,7 @@ tests:
 
 # https://github.com/goreleaser/godownloader
 install.sh: .goreleaser.yml
-	godownloader --repo=traefik/yaegi -o install.sh .goreleaser.yml
+	godownloader --repo=pulseaiclub/yaegi -o install.sh .goreleaser.yml
 
 generic_list = cmp/cmp.go slices/slices.go slices/sort.go slices/zsortanyfunc.go maps/maps.go \
 			   sync/oncefunc.go sync/atomic/type.go

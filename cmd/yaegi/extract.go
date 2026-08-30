@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/traefik/yaegi/extract"
+	"github.com/pulseaiclub/yaegi/extract"
 )
 
 func extractCmd(arg []string) error {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/traefik/yaegi/interp"
-	"github.com/traefik/yaegi/stdlib"
+	"github.com/pulseaiclub/yaegi/interp"
+	"github.com/pulseaiclub/yaegi/stdlib"
 )
 
 func TestGetFunc(t *testing.T) {

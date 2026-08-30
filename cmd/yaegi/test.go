@@ -12,11 +12,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/traefik/yaegi/interp"
-	"github.com/traefik/yaegi/stdlib"
-	"github.com/traefik/yaegi/stdlib/syscall"
-	"github.com/traefik/yaegi/stdlib/unrestricted"
-	"github.com/traefik/yaegi/stdlib/unsafe"
+	"github.com/pulseaiclub/yaegi/interp"
+	"github.com/pulseaiclub/yaegi/stdlib"
+	"github.com/pulseaiclub/yaegi/stdlib/syscall"
+	"github.com/pulseaiclub/yaegi/stdlib/unrestricted"
+	"github.com/pulseaiclub/yaegi/stdlib/unsafe"
 )
 
 func test(arg []string) (err error) {

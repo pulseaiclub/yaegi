@@ -28,7 +28,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/traefik/yaegi/extract"
+	"github.com/pulseaiclub/yaegi/extract"
 )
 
 var (

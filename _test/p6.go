@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/traefik/yaegi/_test/p6"
+	"github.com/pulseaiclub/yaegi/_test/p6"
 )
 
 func main() {
