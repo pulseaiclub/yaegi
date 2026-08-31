@@ -540,7 +540,7 @@ func (interp *Interpreter) EvalPathWithContext(ctx context.Context, path string)
 // EvalTest evaluates Go code located at path, including test files with "_test.go" suffix.
 // A non nil error is returned in case of failure.
 // The main function, test functions and benchmark functions are internally compiled but not
-// executed. Test functions can be retrieved using the Symbol() method.
+// executed. Test functions can be retrieved using the Symbol method.
 func (interp *Interpreter) EvalTest(path string) error {
 	_, err := interp.importSrc(mainID, path, Test)
 	return err

@@ -1,6 +1,7 @@
 package interp
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"go/constant"
@@ -9,9 +10,166 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strings"
 
 	gen "github.com/pulseaiclub/yaegi/stdlib/generic"
 )
+
+// ErrSymbolNotFound is returned by Symbol when the requested name is not found.
+var ErrSymbolNotFound = errors.New("symbol not found")
+
+// Symbol returns the reflect.Value of an exported symbol previously defined by
+// Eval / EvalPath / Compile+Execute (or registered via Use for binary packages).
+//
+// The name may be:
+//   - a bare identifier, looked up in package "main" (e.g. "Extension")
+//   - a package-qualified name "pkg.Name" where pkg is a package name or import
+//     path (e.g. "main.Extension", "foo.Bar", "encoding/json.Marshal")
+//
+// Unlike Eval("pkg.Name"), Symbol does not re-parse or compile source; it reads
+// the interpreter's symbol table directly. Prefer Symbol when hosting plugins
+// or extensions that need to retrieve an entry point after evaluating a file.
+func (interp *Interpreter) Symbol(name string) (reflect.Value, error) {
+	pkgPath, symName := splitSymbolName(name)
+	if symName == "" || !canExport(symName) {
+		return reflect.Value{}, fmt.Errorf("%w: %q", ErrSymbolNotFound, name)
+	}
+
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
+
+	if v, ok := interp.lookupSrcSymbol(pkgPath, symName); ok {
+		return v, nil
+	}
+	if v, ok := interp.lookupBinSymbol(pkgPath, symName); ok {
+		return v, nil
+	}
+	return reflect.Value{}, fmt.Errorf("%w: %q", ErrSymbolNotFound, name)
+}
+
+// splitSymbolName splits "pkg.Name" or "import/path.Name". A bare name is
+// treated as belonging to package "main".
+func splitSymbolName(name string) (pkg, sym string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", ""
+	}
+	i := strings.LastIndex(name, ".")
+	if i < 0 {
+		return mainID, name
+	}
+	return name[:i], name[i+1:]
+}
+
+func (interp *Interpreter) lookupSrcSymbol(pkgPath, symName string) (reflect.Value, bool) {
+	for _, key := range interp.srcPkgKeys(pkgPath) {
+		syms, ok := interp.srcPkg[key]
+		if !ok {
+			continue
+		}
+		s, ok := syms[symName]
+		if !ok || !canExport(symName) {
+			continue
+		}
+		if v, ok := interp.srcSymbolValue(s); ok {
+			return v, true
+		}
+	}
+	return reflect.Value{}, false
+}
+
+func (interp *Interpreter) lookupBinSymbol(pkgPath, symName string) (reflect.Value, bool) {
+	for _, key := range interp.binPkgKeys(pkgPath) {
+		syms, ok := interp.binPkg[key]
+		if !ok {
+			continue
+		}
+		v, ok := syms[symName]
+		if ok && v.IsValid() {
+			return v, true
+		}
+	}
+	return reflect.Value{}, false
+}
+
+// srcPkgKeys returns candidate srcPkg keys for a package name or import path.
+func (interp *Interpreter) srcPkgKeys(pkgPath string) []string {
+	if _, ok := interp.srcPkg[pkgPath]; ok {
+		return []string{pkgPath}
+	}
+	var keys []string
+	for path, name := range interp.pkgNames {
+		if name == pkgPath {
+			if _, ok := interp.srcPkg[path]; ok {
+				keys = append(keys, path)
+			}
+		}
+	}
+	return keys
+}
+
+// binPkgKeys returns candidate binPkg keys for a package name or import path.
+func (interp *Interpreter) binPkgKeys(pkgPath string) []string {
+	if _, ok := interp.binPkg[pkgPath]; ok {
+		return []string{pkgPath}
+	}
+	var keys []string
+	for path, name := range interp.pkgNames {
+		if name == pkgPath {
+			if _, ok := interp.binPkg[path]; ok {
+				keys = append(keys, path)
+			}
+		}
+	}
+	// Also match by last path element when pkgNames has no entry.
+	if len(keys) == 0 {
+		for path := range interp.binPkg {
+			if path == pkgPath || pathBase(path) == pkgPath {
+				keys = append(keys, path)
+			}
+		}
+	}
+	return keys
+}
+
+func pathBase(p string) string {
+	if i := strings.LastIndex(p, "/"); i >= 0 {
+		return p[i+1:]
+	}
+	return p
+}
+
+// srcSymbolValue converts an interpreter source symbol to a reflect.Value.
+// Incomplete or generic functions that cannot be wrapped are skipped.
+func (interp *Interpreter) srcSymbolValue(s *symbol) (reflect.Value, bool) {
+	switch s.kind {
+	case constSym:
+		if s.rval.IsValid() {
+			return s.rval, true
+		}
+	case funcSym:
+		if s.node == nil || s.node.typ == nil {
+			return reflect.Value{}, false
+		}
+		ft := s.node.typ.TypeOf()
+		if ft == nil || ft.Kind() != reflect.Func {
+			// Generic or incomplete function; not callable via reflect yet.
+			return reflect.Value{}, false
+		}
+		return genFunctionWrapper(s.node)(interp.frame), true
+	case varSym:
+		if s.index >= 0 && s.index < len(interp.frame.data) {
+			return interp.frame.data[s.index], true
+		}
+	case typeSym:
+		if s.typ != nil {
+			if t := s.typ.TypeOf(); t != nil {
+				return reflect.New(t), true
+			}
+		}
+	}
+	return reflect.Value{}, false
+}
 
 // Symbols returns a map of interpreter exported symbol values for the given
 // import path. If the argument is the empty string, all known symbols are
@@ -31,15 +189,8 @@ func (interp *Interpreter) Symbols(importPath string) Exports {
 				// Skip private non-exported symbols.
 				continue
 			}
-			switch s.kind {
-			case constSym:
-				syms[n] = s.rval
-			case funcSym:
-				syms[n] = genFunctionWrapper(s.node)(interp.frame)
-			case varSym:
-				syms[n] = interp.frame.data[s.index]
-			case typeSym:
-				syms[n] = reflect.New(s.typ.TypeOf())
+			if val, ok := interp.srcSymbolValue(s); ok {
+				syms[n] = val
 			}
 		}
 
